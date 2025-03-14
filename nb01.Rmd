@@ -1,0 +1,92 @@
+---
+title: "Statistical tests for comparisons"
+subtitle: "Using base R"
+author: "Alex"
+date: "`r format(Sys.time(), '%d %B %Y, %H:%M:%S')`"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    number_sections: false
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The dataset `gene-expressions.csv` consists of 47 patients (rows) and 10 genes (columns). The additional column "phenoData" is a grouping variable (2 levels) and contains the phenotype of each patient. The other columns contain the expression values of each gene.
+
+Select one gene and perform the following statistical analysis:
+
+1. Plot the data (e.g. one boxplot for each phenotype in a single chart). Describe your data, detect possible outliers, and observe the difference between groups.
+
+```{r}
+z <- read.csv("gene-expressions.csv", sep = ";", header = TRUE)
+head(z)
+```
+
+```{r}
+dim(z)
+```
+
+```{r}
+# k <- sample(ncol(z) - 2, size = 1) + 2 # select random gene
+k <- 9
+cat("gene index selected:", k, fill = TRUE)
+cat("gene selected:", names(z)[k + 2])
+```
+
+Phenotype levels:
+
+```{r}
+unique(z$phenoData)
+```
+
+```{r}
+boxplot(X37251_s_at ~ phenoData, data = z, 
+        xlab = "Phenotype", ylab = "Gene expression",
+        main = "Gene expression between phenotypes")
+```
+
+uptohere
+
+2. Test whether there is a difference between the two phenotypes according to the expression values of the selected gene. Use the following statistical tests: two-sample t-test `t.test()`, Wilcoxon rank sum test `wilcox.test()`, and a one-way ANOVA `lm()`, `anova()`. State the null hypotheses and whether the null hypotheses is rejected or not) for each test. Compare the results.
+
+two-sample t-test:
+
+```{r}
+t.test(X37251_s_at ~ phenoData, alternative = "two.sided", data = z)
+```
+
+```{r}
+t.test(X37251_s_at ~ phenoData, alternative = "less", data = z)
+```
+
+The 95% confidence interval for the true difference between the mean values does not contain the zero value. This means that we have to accept the alternative hypothesis, stating that there is a difference between phenotypes. The second test confirms this fact. Alternatively, we can simply look to the p-value; it is smaller then 0.05.
+
+Wilcoxon rank sum test:
+
+```{r}
+wilcox.test(X37251_s_at ~ phenoData, data = z)
+```
+
+One-way ANOVA:
+
+```{r}
+mod <- lm(X37251_s_at ~ phenoData, data = z)
+mod
+```
+
+```{r}
+anova(mod)
+```
+
+The ANOVA tests the null hypothesis that samples in two or more groups are drawn from the same population. Here we observe a high difference between the two groups.
+
+What are the theoretical assumptions for these four different methods, in case there are any? How can you check them?
+
+The t-test is based on the assumption that the data are normally distributed. The Wilcoxon test drops the normality assumption. The normality assumption can be graphically explored through the boxplots created above. We observed a few outliers, which means that the normality assumption for the t-test is not met. Normality tests can be also performed with a QQ plot or with computational methods, such as the Kolmogorov-Smirnov test. The ANOVA tests the null hypothesis that samples in two or more groups are drawn from the same population. The assumptions are the following: the populations from which the samples were obtained must be (approximately) normally distributed, the samples must be independent, and the variances of the populations must be equal. Here the independence assumption is met, the normality assumption was discussed above, while the population variances are unknown. The Bartlett test of homogeneity of variances can be used to test the null that the variances in each of the groups are the same. If the p-value is smaller than 0.05, the null hypothesis is rejected.
+
+```{r}
+bartlett.test(X37251_s_at  ~ phenoData, data = z)
+```
